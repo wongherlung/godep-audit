@@ -2,16 +2,31 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"./output"
 )
 
 const (
 	packageLine = "name ="
 )
+
+type Whitelist struct {
+	Packages []Package `json:"whitelisted_packages"`
+}
+
+type Package struct {
+	Name           string `json:"name"`
+	UpstreamCommit string `json:"upstream_commit"`
+}
 
 func runGoDepCommand() bytes.Buffer {
 	var out bytes.Buffer
@@ -36,7 +51,7 @@ func getRHSValue(s string, delim string) string {
 	return strings.Trim(strings.Split(s, delim)[1], " \"")
 }
 
-func processOutput(b bytes.Buffer) map[string]string {
+func processDepOutput(b bytes.Buffer) map[string]string {
 	pkgs := make(map[string]string)
 	lines := strings.Split(b.String(), "\n")
 
@@ -51,13 +66,45 @@ func processOutput(b bytes.Buffer) map[string]string {
 	return pkgs
 }
 
-func outputToJUnitXML(pkgs map[string]string) {
-	for name, version := range pkgs {
-		fmt.Println(name + " " + version)
+func getWhitelistedPackages(whitelistFile string) Whitelist {
+	var whitelist Whitelist
+	jsonFile, err := os.Open(whitelistFile)
+	defer jsonFile.Close()
+	if err != nil {
+		json.Unmarshal([]byte("{}"), &whitelist)
+		return whitelist
 	}
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		json.Unmarshal([]byte("{}"), &whitelist)
+		return whitelist
+	}
+
+	err = json.Unmarshal(byteValue, &whitelist)
+	if err != nil {
+		json.Unmarshal([]byte("{}"), &whitelist)
+	}
+	return whitelist
+}
+
+func outputJUnitXMLToStdout(pkgs map[string]string, whitelist Whitelist) {
+	for _, whitelistPkg := range whitelist.Packages {
+		if _, ok := pkgs[whitelistPkg.Name]; ok &&
+			getRHSValue(pkgs[whitelistPkg.Name], "->") == whitelistPkg.UpstreamCommit {
+			delete(pkgs, whitelistPkg.Name)
+		}
+	}
+
+	xmlString := output.GenerateXMLString(pkgs)
+	fmt.Println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlString)
 }
 
 func main() {
-	pkgs := processOutput(runGoDepCommand())
-	outputToJUnitXML(pkgs)
+	whitelistFile := flag.String("whitelist", "whitelist.json", "Path to whitelist file.")
+	flag.Parse()
+
+	pkgs := processDepOutput(runGoDepCommand())
+	whitelistedPkgs := getWhitelistedPackages(*whitelistFile)
+	outputJUnitXMLToStdout(pkgs, whitelistedPkgs)
 }
