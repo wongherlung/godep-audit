@@ -88,16 +88,13 @@ func getWhitelistedPackages(whitelistFile string) Whitelist {
 	return whitelist
 }
 
-func outputJUnitXMLToStdout(pkgs map[string]string, whitelist Whitelist) {
+func filterWhitelistedPkgs(pkgs map[string]string, whitelist Whitelist) {
 	for _, whitelistPkg := range whitelist.Packages {
 		if _, ok := pkgs[whitelistPkg.Name]; ok &&
 			getRHSValue(pkgs[whitelistPkg.Name], "->") == whitelistPkg.UpstreamCommit {
 			delete(pkgs, whitelistPkg.Name)
 		}
 	}
-
-	xmlString := output.GenerateXMLString(pkgs)
-	fmt.Println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlString)
 }
 
 func main() {
@@ -106,5 +103,8 @@ func main() {
 
 	pkgs := processDepOutput(runGoDepCommand())
 	whitelistedPkgs := getWhitelistedPackages(*whitelistFile)
-	outputJUnitXMLToStdout(pkgs, whitelistedPkgs)
+	filterWhitelistedPkgs(pkgs, whitelistedPkgs)
+
+	xmlString := output.GenerateXMLString(pkgs)
+	fmt.Println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlString)
 }
