@@ -1,6 +1,6 @@
 ## godep-audit
 
-This program makes use of the output of `dep ensure -update -dry-run` to determine which packages are outdated. Based on the whitelist file (format given below), it will output the outdated packages in JUnit XML format.
+This program makes use of the output of `dep ensure -update -dry-run` to determine which packages are outdated. Based on the `json` whitelist file (format given below), it will output the outdated packages in JUnit XML format.
 
 ### Whitelisting format
 
