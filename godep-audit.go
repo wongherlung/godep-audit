@@ -11,8 +11,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-
-	"./output"
 )
 
 const (
@@ -105,6 +103,6 @@ func main() {
 	whitelistedPkgs := getWhitelistedPackages(*whitelistFile)
 	filterWhitelistedPkgs(pkgs, whitelistedPkgs)
 
-	xmlString := output.GenerateXMLString(pkgs)
+	xmlString := generateXMLString(pkgs)
 	fmt.Println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlString)
 }

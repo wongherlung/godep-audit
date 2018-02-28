@@ -1,4 +1,4 @@
-package output
+package main
 
 import (
 	"encoding/xml"
@@ -29,7 +29,7 @@ type Failure struct {
 	Text    string   `xml:",innerxml"`
 }
 
-func GenerateXMLString(pkgs map[string]string) string {
+func generateXMLString(pkgs map[string]string) string {
 	var xmlReport = XMLReport{
 		Testsuites: Testsuite{
 			Name:      "godep-audit",
